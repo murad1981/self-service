@@ -35,7 +35,7 @@ The contract is the spine: every cross-system flow depends on it, so the OpenAPI
 
 **Goal:** the contract-first pipeline and the JWT/session backbone exist end-to-end.
 
-- Backend: `common` (response wrapper, `ApiError`, exception handler, correlation-ID filter, i18n `MessageSource`, idempotency filter, `CacheProvider`/Caffeine, `RateLimiter`/Bucket4j, `FieldEncryptor`/KMS seams); `configuration` (Security, JWT, OpenAPI, health groups); `auth` module (JWT access+refresh **rotation + reuse-detection**, RBAC, BCrypt); Flyway V1 + seed (roles, QA user).
+- Backend: `common` (response wrapper, `ApiError`, exception handler, correlation-ID filter, i18n `MessageSource`, idempotency filter, `CacheProvider`/Caffeine, `RateLimiter`/Bucket4j, `FieldEncryptor`/KMS seams); `configuration` (Security, JWT, OpenAPI, health groups); `auth` module (JWT access+refresh **rotation + reuse-detection**, RBAC, BCrypt); Flyway V1 + seed (roles, QA user). **Phases 1–4 run against local Docker Compose PostgreSQL (`local` profile) — Cloud SQL stays off (ADR-012)**; migrations/tests are identical to Cloud SQL.
 - Contract: springdoc emits OpenAPI 3.1 → `packages/contracts/openapi/self-serve.v1.yaml` (canonical sort); **drift gate** live. Mobile codegen (`openapi-typescript`+`openapi-fetch`+`openapi-react-query`) → `packages/contracts/generated/ts`; **client-drift gate** live.
 - Mobile: networking layer (interceptors, resilience, correlation-ID, secure-store token storage), i18n bootstrap (Arabic-first + I18nManager RTL), navigation skeleton with group gating, Zustand session store.
 - Tests: auth/JWT/refresh (both sides), networking layer, correlation-ID propagation.
@@ -72,7 +72,7 @@ The contract is the spine: every cross-system flow depends on it, so the OpenAPI
 
 ## Phase 5 — Infra, CI/CD, deploy (Week 9–11)
 
-- `infra` — provisioned via **Terraform (default method, ADR-011)**: WIF pool/provider + per-env SAs (deploy + runtime, least-privilege); 3 Cloud Run services (scale-to-zero); Cloud SQL (shared nonprod + isolated prod, `create_cloud_sql=true`); KMS key rings; Secret Manager; Artifact Registry; Cloud Logging. All in me-central2 (Dammam). See `infra/README.md`.
+- `infra` — provisioned via **Terraform (default method, ADR-011)**: WIF pool/provider + per-env SAs (deploy + runtime, least-privilege); 3 Cloud Run services (scale-to-zero); KMS key rings; Secret Manager; Artifact Registry; Cloud Logging. All in me-central2 (Dammam). **This is where Cloud SQL is first enabled** (`create_cloud_sql=true`, shared nonprod + isolated prod; ADR-012) — the backend switches from local Docker Postgres to Cloud SQL on deploy. See `infra/README.md`.
 - Backend CI/CD: multi-stage Java 25 Docker → WIF → Artifact Registry → Cloud Run per env (`SPRING_PROFILES_ACTIVE`, Secret Manager mounts, Flyway, `/health` smoke). Mobile CI/CD: EAS build per profile → EAS Update per channel → TestFlight/Play internal (non-prod).
 - Promotion wiring: qa auto; staging (1 reviewer) + production (2 reviewers, `v*` tags) via GitHub Environments; same-digest backend promotion; OTA-vs-store mobile policy.
 

@@ -39,6 +39,9 @@ Status legend: **Accepted (default)** = proceeding on the recommended default un
 ### ADR-010 — Design system from public DGA resources (no Figma)
 **Accepted (user instruction).** The user has no paid Figma account, so the design system is built from the **publicly available DGA Design System and digital/brand guidelines** rather than the two Figma files referenced in §4.8/§12.10. Design tokens (color, typography incl. Arabic type, spacing, radii, elevation), components, and patterns are codified into the RTL-first UI kit from published DGA specs. Any value the public guidelines do not specify is flagged in the UI-kit docs and raised with the user — no generic/invented theme. WCAG AA + RTL accessibility remain required.
 
+### ADR-012 — Local Docker Postgres for development; Cloud SQL deferred to GCP deploy
+**Accepted (user instruction).** Cloud SQL is the only continuously-billed resource, so it stays **off** (`create_cloud_sql = false` in Terraform) during development. The backend's `local` Spring profile uses the **Docker Compose PostgreSQL** (Appendix A) — zero cloud cost — and `qa`/`staging`/`production` profiles point at Cloud SQL only once the backend is deployed to Cloud Run (Phase 5). Flyway migrations and Testcontainers integration tests run identically against local Postgres and Cloud SQL, so deferring it changes nothing in the code — only `create_cloud_sql = true` (and a re-apply) is needed when GCP deployment begins. The shared-nonprod / isolated-prod sizing (§12.3) applies when enabled.
+
 ---
 
 ## Part 2 — §12 Open Decisions (all surfaced with recommended defaults)
