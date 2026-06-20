@@ -1,0 +1,8 @@
+# Never commit real config or any credential material.
+gcp/config.env
+*.json
+*.tfvars
+!*.tfvars.example
+.terraform/
+*.tfstate
+*.tfstate.*

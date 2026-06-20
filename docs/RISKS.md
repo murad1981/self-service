@@ -5,9 +5,9 @@ Severity: **High** (can block delivery / breach a non-negotiable), **Med** (mate
 | # | Risk | Sev | Domain | Mitigation |
 |---|---|---|---|---|
 | R-01 | **CNTXT / me-central2 procurement gate.** Dammam region requires KSA reseller (CNTXT) + mandatory Invoiced Billing; blocks all in-region provisioning. Fallback me-central1 (Doha) is outside KSA → weakens PDPL residency for Tier-4 data. | **High** | E / C | Escalate to MoE/procurement now (§12.6/12.6a). Build region-agnostic POC code in parallel. Accept me-central1 only with documented PDPL risk acceptance + SDAIA cross-border safeguards. |
-| R-02 | **Nafath licensing/credentials unavailable.** TCC license + provider (SDAIA/ELM) tenant + sandbox credentials are prerequisites for the entire identity flow. | **High** | C | Confirm with MoE early (§12.5). Mock `NafathProvider` for early dev so the flow is buildable/testable without live credentials. |
+| R-02 | ~~Nafath licensing/credentials unavailable.~~ **RESOLVED — POC uses a `MockNafathProvider` (ADR-009).** Residual: the mock must faithfully mirror the real status/error semantics so the swap is seamless. | Low (was High) | C | Mock behind `NafathProvider`; contract test against documented Nafath semantics; real provider drops in with no caller changes. |
 | R-03 | **Biometric residency breach.** Sending Tier-4 face data to a non-KSA host without SDAIA SCC + risk assessment violates PDPL. | **High** | C / E | Default Face ML host = in-region Cloud Run model service (ADR-004). Any third party requires KSA hosting + DPA + SCC. |
-| R-04 | **DGA Figma files not delivered / incomplete.** Blocks design-system extraction; risks inventing a non-compliant theme. | **High** | A | Surface as blocking (§12.10). Fallback: public DGA guidelines + flag gaps + ask user. UI kit must cover tokens + components + patterns + WCAG AA/RTL. |
+| R-04 | ~~DGA Figma files not delivered.~~ **RESOLVED — build from public DGA resources (ADR-010);** no Figma. Residual: public guidelines may under-specify some tokens/components. | Low (was High) | A | Codify tokens from published DGA specs; flag each gap in UI-kit docs + ask user; never invent a generic theme; keep WCAG AA + RTL. |
 | R-05 | **Liveness deferred in POC.** Check-in is photo/replay-spoofable without liveness. | Med | C | Documented POC limitation. Pipeline liveness-ready behind provider interface; enable passive liveness before production. |
 | R-06 | **RN 0.86 expectation vs reality (0.85).** Forcing 0.86 would break the verified New-Arch dependency matrix. | Med | A | Pin SDK-56-bundled RN 0.85 (ADR-002); `expo install --check` CI gate; keep pin under review vs Expo release notes. |
 | R-07 | **Flyway Boot 4 auto-config break.** `flyway-core` alone no longer auto-configures in Boot 4 → migrations silently skipped. | Med | B | Pin `spring-boot-starter-flyway` + `flyway-database-postgresql`; integration test asserts schema version on startup. |
@@ -29,10 +29,12 @@ Severity: **High** (can block delivery / breach a non-negotiable), **Med** (mate
 | R-23 | **MSW RN integration needs polyfills** / potentially incomplete. | Low | G | Pin MSW 2.x; lock polyfill setup; smoke-test early; interceptor-level fallback. |
 | R-24 | **PDPL retention non-compliance** (templates/logs kept too long). | Low | C | Defined retention/deletion policies; automated purge jobs; check-in retention default 90d (§12.8). |
 | R-25 | **Spring Boot 4.0 EOL 2026-12-31.** Short support window. | Low | B | Plan a 4.1.x bump path (4.1 GA June 2026); stay on the 4.x train. |
+| R-26 | **No GCP credentials in the remote sandbox.** Project `SelfService` + billing exist, but this ephemeral session has no service account / ADC / metadata identity and no browser for OAuth, so direct gcloud interaction is blocked until an auth method is chosen. Pasting a long-lived SA key into the session is a secret-in-transcript risk and conflicts with §8 (WIF, no long-lived keys). | Med | E | Choose auth approach (see open question). Prefer committing idempotent infra-as-code + WIF (§8) over long-lived keys; if a key is used for the sandbox, scope it least-privilege and delete after. Project **ID** (not display name) required. |
 
 ## Highest-priority escalations (require user / MoE action)
 
 1. **R-01** CNTXT / me-central2 onboarding.
-2. **R-02** Nafath provider + license + credentials.
-3. **R-04** DGA Figma access.
-4. **R-03** Face ML residency (resolved by ADR-004 default; re-opens if a third-party host is chosen).
+2. **R-26** GCP authentication method for direct CLI interaction + project ID.
+3. **R-03** Face ML residency (resolved by ADR-004 default; re-opens if a third-party host is chosen).
+
+*(R-02 Nafath and R-04 DGA Figma resolved — see ADR-009 / ADR-010.)*
