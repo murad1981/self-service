@@ -2,4 +2,8 @@
 project_id  = "REPLACE_WITH_PROJECT_ID"
 region      = "me-central2" # Dammam, KSA (this project is CNTXT-onboarded)
 github_repo = "murad1981/self-service"
-# envs, prefix, secret_names, kms_keys have sensible defaults in variables.tf
+
+# Billable Cloud SQL is off by default. Set true when ready to provision it.
+# create_cloud_sql = true
+
+# envs, prefix, secret_names, kms_keys, sql_tier have sensible defaults in variables.tf

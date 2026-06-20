@@ -72,7 +72,7 @@ The contract is the spine: every cross-system flow depends on it, so the OpenAPI
 
 ## Phase 5 — Infra, CI/CD, deploy (Week 9–11)
 
-- `infra`: WIF pool/provider + per-env SAs (deploy + runtime, least-privilege); 3 Cloud Run services (scale-to-zero); Cloud SQL (shared nonprod + isolated prod); KMS key rings; Secret Manager; Artifact Registry; Cloud Logging. All in me-central2 (Dammam). See `infra/README.md`.
+- `infra` — provisioned via **Terraform (default method, ADR-011)**: WIF pool/provider + per-env SAs (deploy + runtime, least-privilege); 3 Cloud Run services (scale-to-zero); Cloud SQL (shared nonprod + isolated prod, `create_cloud_sql=true`); KMS key rings; Secret Manager; Artifact Registry; Cloud Logging. All in me-central2 (Dammam). See `infra/README.md`.
 - Backend CI/CD: multi-stage Java 25 Docker → WIF → Artifact Registry → Cloud Run per env (`SPRING_PROFILES_ACTIVE`, Secret Manager mounts, Flyway, `/health` smoke). Mobile CI/CD: EAS build per profile → EAS Update per channel → TestFlight/Play internal (non-prod).
 - Promotion wiring: qa auto; staging (1 reviewer) + production (2 reviewers, `v*` tags) via GitHub Environments; same-digest backend promotion; OTA-vs-store mobile policy.
 

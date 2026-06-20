@@ -50,3 +50,15 @@ variable "kms_keys" {
   type    = list(string)
   default = ["pii", "biometric", "location"]
 }
+
+variable "create_cloud_sql" {
+  type        = bool
+  default     = false
+  description = "BILLABLE. When true, provision a shared non-prod Cloud SQL instance (qa+staging DBs) + an isolated production instance. The POC cost floor (no scale-to-zero)."
+}
+
+variable "sql_tier" {
+  type        = string
+  default     = "db-f1-micro"
+  description = "Cloud SQL machine tier (smallest shared-core for the POC). Adjust if the API rejects it for your edition."
+}

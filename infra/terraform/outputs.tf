@@ -16,3 +16,11 @@ output "runtime_service_accounts" {
 output "artifact_registry_image_prefix" {
   value = "${var.region}-docker.pkg.dev/${var.project_id}/${var.ar_repo}"
 }
+
+output "cloud_sql_connection_names" {
+  description = "Cloud SQL instance connection names (empty unless create_cloud_sql = true)."
+  value = var.create_cloud_sql ? {
+    nonprod = google_sql_database_instance.nonprod[0].connection_name
+    prod    = google_sql_database_instance.prod[0].connection_name
+  } : {}
+}

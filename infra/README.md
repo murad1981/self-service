@@ -1,10 +1,12 @@
 # Infrastructure — Self-Serve POC (GCP)
 
-Infrastructure-as-code for the `SelfService` GCP project. You run these with **your own** authenticated `gcloud`; no credentials are ever handed to the assistant or committed (per [§8](../docs/architecture/C-security-compliance.md) and ADR-011).
+Infrastructure-as-code for the `SelfService` GCP project. You run it with **your own** credentials; no credentials are ever handed to the assistant or committed (per [§8](../docs/architecture/C-security-compliance.md) and ADR-011).
 
-Two equivalent paths — **use one**:
-- **`gcp/` — idempotent gcloud scripts** (canonical for the POC; nothing to install beyond `gcloud`).
-- **`terraform/` — declarative module** (optional; mirrors the scripts).
+## Terraform is the default (canonical) method
+
+**Use [`terraform/`](./terraform/) for all setup and ongoing cloud operations.** It is declarative, idempotent, state-tracked, and reviewable in PRs — the source of truth for what exists in the project. New infra changes go through Terraform.
+
+The [`gcp/`](./gcp/) gcloud scripts are a **secondary/convenience path** only — useful for a one-off bootstrap on a machine without Terraform, or for quick manual inspection. **Do not** run the scripts against a project that Terraform manages: two tools mutating the same resources will fight and cause drift. Pick one per project; the default is Terraform.
 
 ## Model (single project)
 
@@ -12,52 +14,43 @@ You created one project, so all three environments (`qa` / `staging` / `producti
 
 ## Region & residency
 
-`REGION` defaults to **`me-central2` (Dammam, KSA)** — the PDPL-preferred region for Tier-4 data. This is valid because the `SelfService` project is **CNTXT-onboarded** with Invoiced Billing (the access requirement for me-central2). `me-central1` (Doha) remains a documented standard-billing fallback but is not used here (it would place Tier-4 data outside KSA).
+`region` defaults to **`me-central2` (Dammam, KSA)** — the PDPL-preferred region for Tier-4 data. This is valid because the `SelfService` project is **CNTXT-onboarded** with Invoiced Billing (the access requirement for me-central2). `me-central1` (Doha) remains a documented standard-billing fallback but is not used here.
 
-## Prerequisites
-
-1. Install gcloud and authenticate as yourself:
-   ```bash
-   gcloud auth login
-   gcloud config set project <YOUR_PROJECT_ID>
-   ```
-2. You need roles to create IAM/SAs/WIF (Owner, or Editor + Project IAM Admin + Workload Identity Pool Admin) on the project.
-3. Find your project **ID** (not the display name "SelfService"):
-   ```bash
-   gcloud projects list --filter='name:SelfService' --format='value(projectId)'
-   ```
-
-## Run (gcloud scripts)
+## Run (Terraform — default)
 
 ```bash
-cd infra/gcp
-cp config.env.example config.env      # then edit: PROJECT_ID, REGION, GITHUB_REPO
-chmod +x *.sh
-./bootstrap.sh                         # APIs, Artifact Registry, SAs, WIF, KMS, Secrets, IAM (non-billable)
-
-# Billable, opt-in (Cloud SQL — the POC cost floor):
-CONFIRM=yes ./06-cloud-sql.sh
-
-# Tear down to stop cost:
-CONFIRM=yes ./teardown.sh
+cd infra/terraform
+cp terraform.tfvars.example terraform.tfvars   # edit: project_id (the ID, not "SelfService")
+gcloud auth application-default login           # Terraform reads these ADC credentials
+terraform init
+terraform plan
+terraform apply
 ```
 
-`config.env` is gitignored. Every script is idempotent (re-running is safe).
+Read the outputs (used to wire CI/CD):
+```bash
+terraform output wif_provider_resource
+terraform output deploy_service_accounts
+```
 
-### What gets created
+- **Prerequisites:** roles to create IAM/SAs/WIF (Owner, or Editor + Project IAM Admin + Workload Identity Pool Admin). Find your project ID: `gcloud projects list --filter='name:SelfService' --format='value(projectId)'`.
+- **State:** for shared/CI use, configure a remote backend (GCS bucket). A local backend is fine for a solo POC run. State contains resource metadata, **not** secret values.
+- **Billable Cloud SQL** is **off by default**; enable it when ready by setting `create_cloud_sql = true` in `terraform.tfvars` (it is the POC cost floor — no scale-to-zero). See [`terraform/README.md`](./terraform/README.md).
 
-| Step | Resource | Billable? |
-|---|---|---|
-| 00 | Enable required APIs | no |
-| 01 | Artifact Registry Docker repo | ~free (storage) |
-| 02 | `gha-deploy-<env>` + `run-runtime-<env>` service accounts (no keys) | no |
-| 03 | Workload Identity Federation pool + GitHub OIDC provider + bindings | no |
-| 04 | KMS key ring + `pii`/`biometric`/`location` keys per env | <$1/mo |
-| 05 | Secret Manager secrets (empty placeholders, regional) | free tier |
-| 07 | Least-privilege IAM bindings (runtime + deploy SAs) | no |
-| 06 | Cloud SQL PostgreSQL (shared non-prod + isolated prod) | **yes** |
+### What Terraform manages
 
-Secrets are created **empty**. Add values out-of-band — never commit them:
+| Resource | Billable? |
+|---|---|
+| Enabled APIs | no |
+| Artifact Registry Docker repo | ~free (storage) |
+| `gha-deploy-<env>` + `run-runtime-<env>` service accounts (no keys) | no |
+| Workload Identity Federation pool + GitHub OIDC provider + bindings | no |
+| KMS key ring + `pii`/`biometric`/`location` keys per env | <$1/mo |
+| Secret Manager secrets (empty placeholders, regional) | free tier |
+| Least-privilege IAM bindings (runtime + deploy SAs) | no |
+| Cloud SQL PostgreSQL (shared non-prod + isolated prod) — **`create_cloud_sql=true`** | **yes** |
+
+Secrets are created **empty**. Add values out-of-band — never commit them or put them in `.tfvars`/state:
 ```bash
 printf '%s' "<value>" | gcloud secrets versions add selfserve-qa-jwt-signing-key --data-file=- --project=<PROJECT_ID>
 ```
@@ -65,7 +58,7 @@ Nafath secrets stay empty for the POC (mock provider, ADR-009).
 
 ## Wire CI/CD to WIF (no keys)
 
-After `03` prints the provider resource + per-env deploy SAs, use them in the backend deploy workflow:
+Use the Terraform outputs in the backend deploy workflow:
 
 ```yaml
 permissions:
@@ -78,8 +71,8 @@ steps:
       service_account: gha-deploy-${{ env.APP_ENV }}@<PROJECT_ID>.iam.gserviceaccount.com
 ```
 
-**Production hardening:** scope the production deploy SA to a protected GitHub Environment / tag refs rather than the whole repo — see the note in `03-workload-identity-federation.sh`.
+**Production hardening:** scope the production deploy SA to a protected GitHub Environment / tag refs rather than the whole repo (see the WIF binding note in `terraform/main.tf` / `gcp/03-workload-identity-federation.sh`).
 
-## Terraform (optional alternative)
+## Secondary path (gcloud scripts)
 
-See [`terraform/README.md`](./terraform/README.md). Covers the same non-billable foundation (APIs, Artifact Registry, SAs, WIF, KMS, Secrets, IAM). Use **either** Terraform **or** the scripts, not both, to avoid drift.
+Only if you cannot use Terraform on a given machine. See [`gcp/`](./gcp/) — `cp config.env.example config.env`, edit, then `./bootstrap.sh` (foundation) and `CONFIRM=yes ./06-cloud-sql.sh` (billable). The scripts create the identical resources; never mix them with Terraform on the same project.
