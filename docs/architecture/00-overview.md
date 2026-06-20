@@ -28,13 +28,13 @@ Planning artifacts for **Self-Serve / الخدمة الذاتية** — MoE (KSA
 |---|---|---|
 | Mobile | **Expo SDK 56.0.12 / React Native 0.85 / React 19.2 / Hermes v1** | ⚠ Prompt said RN 0.86 — **does not exist in any Expo SDK**; pinned the SDK-56-bundled RN 0.85 (ADR-002 / §12.11). New Arch mandatory. |
 | Backend | **Java 25 LTS / Spring Boot 4.0.7** (4.1.0 optional bump) | springdoc 3.0.3, Resilience4j `-spring-boot4` starter, Bucket4j 8.19.0, Flyway 11 (needs Boot-4 starter + postgresql module), Testcontainers 2.0.5, Firebase Admin 9.9.0 |
-| Infra | **GCP me-central2 (Dammam)** | All required services available; **gated by CNTXT reseller + Invoiced Billing** (HIGH risk). Fallback me-central1 (Doha, weaker PDPL). |
+| Infra | **GCP me-central2 (Dammam)** | All required services available. Project is **CNTXT-onboarded with Invoiced Billing**, so me-central2 is used (PDPL-preferred). Single-project POC model. |
 | Contract | **OpenAPI 3.1** via springdoc → `openapi-typescript`+`openapi-fetch`+`openapi-react-query` | Two drift gates. |
 
 ## Top headline items for the user
 
 1. **RN 0.86 → 0.85** version correction (verified, logged).
-2. **CNTXT / me-central2 procurement gate** — blocking external dependency for KSA residency.
+2. ~~CNTXT / me-central2 gate~~ — resolved; project is CNTXT-onboarded, IaC uses Dammam (me-central2).
 3. **Nafath licensing** (provider + TCC license + sandbox credentials) — blocking for the identity flow.
 4. **DGA Figma file access** — blocking for the design-system build.
 5. **Face ML host** reconciled to Cloud Run model service in me-central2 (ADR-004).

@@ -5,8 +5,8 @@ variable "project_id" {
 
 variable "region" {
   type        = string
-  default     = "me-central1"
-  description = "Regional resource location. me-central2 (Dammam) is PDPL-preferred but CNTXT/invoiced-billing gated; me-central1 (Doha) runs on standard billing."
+  default     = "me-central2"
+  description = "Regional resource location. me-central2 (Dammam, KSA) is PDPL-preferred; this CNTXT-onboarded project uses it. me-central1 (Doha) is the standard-billing fallback."
 }
 
 variable "github_repo" {

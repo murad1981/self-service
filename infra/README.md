@@ -10,9 +10,9 @@ Two equivalent paths — **use one**:
 
 You created one project, so all three environments (`qa` / `staging` / `production`) live in it, separated by **env-suffixed resource names** + **per-env service accounts and scoped IAM**. Multi-project isolation + three Firebase projects is the documented production upgrade path (ADR-011, §12.3a).
 
-## Region & residency (read before running)
+## Region & residency
 
-`REGION` defaults to **`me-central1` (Doha)** so the scripts run on a standard billing account. The PDPL-preferred region is **`me-central2` (Dammam, KSA)**, but it is gated by the **CNTXT reseller + mandatory Invoiced Billing** (see [R-01](../docs/RISKS.md)). If your billing is CNTXT-onboarded, set `REGION=me-central2`. Using me-central1 places Tier-4 data outside KSA — document the cross-border risk acceptance with SDAIA safeguards before production.
+`REGION` defaults to **`me-central2` (Dammam, KSA)** — the PDPL-preferred region for Tier-4 data. This is valid because the `SelfService` project is **CNTXT-onboarded** with Invoiced Billing (the access requirement for me-central2). `me-central1` (Doha) remains a documented standard-billing fallback but is not used here (it would place Tier-4 data outside KSA).
 
 ## Prerequisites
 

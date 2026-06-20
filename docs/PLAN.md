@@ -10,7 +10,7 @@ This plan is the output of the §13 planning phase (seven parallel domain agents
 
 - **Mobile:** Expo SDK 56.0.12 / **React Native 0.85** (not 0.86 — ADR-002) / React 19.2 / Hermes v1 / New Architecture mandatory. TypeScript strict, Expo Router, TanStack Query + Zustand, i18next.
 - **Backend:** **Java 25 LTS / Spring Boot 4.0.7**, springdoc-openapi 3.0.3 (emits OpenAPI 3.1), Resilience4j `-spring-boot4`, Bucket4j 8.19.0, Flyway 11 (+ Boot-4 starter + `flyway-database-postgresql`), Testcontainers 2.0.5, Firebase Admin 9.9.0, Lombok latest (records-first).
-- **Infra:** GCP `me-central2` (Dammam) — all required services verified available, **gated by CNTXT reseller + Invoiced Billing**; fallback me-central1. Cloud Run, Cloud SQL (Postgres), Secret Manager, Cloud KMS, Artifact Registry, Cloud Logging, 3 Firebase projects.
+- **Infra:** GCP `me-central2` (Dammam) — project is **CNTXT-onboarded with Invoiced Billing**, so Dammam is used (PDPL-preferred). **Single project** (ADR-011). Cloud Run, Cloud SQL (Postgres), Secret Manager, Cloud KMS, Artifact Registry, Cloud Logging.
 - **Contract:** OpenAPI 3.1, `openapi-typescript` + `openapi-fetch` + `openapi-react-query`, two drift gates.
 
 ## Build order rationale
@@ -27,7 +27,7 @@ The contract is the spine: every cross-system flow depends on it, so the OpenAPI
 - Encode the **env/identifier matrix** (`D-devops-environments.md` §1) as the single source; CI assertion against drift.
 - Backend `pom.xml` + `SelfServeApplication` bootstrap; mobile `app.config.ts` + `eas.json` keyed on `APP_ENV`; ESLint flat config with **`max-lines: 300`**.
 - CI skeleton: backend (build/test placeholder), mobile (typecheck/lint placeholder), contracts (drift gate placeholder).
-- **Escalate blockers** (`DECISIONS.md` Part 3): Nafath provider/license (R-02), CNTXT/me-central2 onboarding (R-01), DGA Figma access (R-04), namespace confirmation (12.9). Collect user inputs: GitHub repo, GCP service account, Firebase config files.
+- **Remaining inputs** (`DECISIONS.md` Part 3): GCP project **ID** + run `infra/` bootstrap; namespace confirmation (12.9); Firebase config files. *(Resolved: Nafath→mock, DGA→public, CNTXT/me-central2→onboarded, single project.)*
 
 **Exit:** CI green on empty skeleton; matrix assertion passing; blockers escalated with owners.
 
@@ -72,7 +72,7 @@ The contract is the spine: every cross-system flow depends on it, so the OpenAPI
 
 ## Phase 5 — Infra, CI/CD, deploy (Week 9–11)
 
-- `infra`: WIF pool/provider + per-env SAs (deploy + runtime, least-privilege); 3 Cloud Run services (scale-to-zero); Cloud SQL (shared nonprod + isolated prod); KMS key rings; Secret Manager; Artifact Registry; Cloud Logging. me-central2 (or me-central1 fallback per R-01).
+- `infra`: WIF pool/provider + per-env SAs (deploy + runtime, least-privilege); 3 Cloud Run services (scale-to-zero); Cloud SQL (shared nonprod + isolated prod); KMS key rings; Secret Manager; Artifact Registry; Cloud Logging. All in me-central2 (Dammam). See `infra/README.md`.
 - Backend CI/CD: multi-stage Java 25 Docker → WIF → Artifact Registry → Cloud Run per env (`SPRING_PROFILES_ACTIVE`, Secret Manager mounts, Flyway, `/health` smoke). Mobile CI/CD: EAS build per profile → EAS Update per channel → TestFlight/Play internal (non-prod).
 - Promotion wiring: qa auto; staging (1 reviewer) + production (2 reviewers, `v*` tags) via GitHub Environments; same-digest backend promotion; OTA-vs-store mobile policy.
 
@@ -99,6 +99,6 @@ The contract is the spine: every cross-system flow depends on it, so the OpenAPI
 ## Critical-path dependencies
 
 - **R-02 Nafath** gates Phase 2 *live* (buildable mocked).
-- **R-01 CNTXT/me-central2** gates Phase 5 *in-region* provisioning (region-agnostic code unblocked).
+- **GCP project ID** + running `infra/` bootstrap gates Phase 5 provisioning (region resolved: me-central2).
 - **R-04 DGA Figma** gates the design-system polish across Phases 2–3 (structural screens unblocked).
 - **12.9 namespace** must settle before first store submission (Phase 5).
